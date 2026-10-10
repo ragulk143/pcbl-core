@@ -20,9 +20,10 @@ public:
     
     void route_text_prompt(const std::string& prompt);
     void route_image_pixel_stream(const std::vector<uint8_t>& pixel_bytes);
-    
-    // Performance Profiler: High-throughput raw hardware benchmarking loop
     void run_hardware_profile_pass();
+    
+    // Core Topology Visualizer: Extract a memory grid slice for bitwise text art rendering
+    void extract_topology_slice(size_t chunk_offset, uint64_t* out_lattice, uint64_t* out_locks, size_t count) const;
     
     void mutate_and_lock_phase(const std::vector<uint64_t>& target_objective_signature);
     void stream_dataset_file(const std::string& filepath, const std::vector<uint64_t>& target_goal);
@@ -57,13 +58,17 @@ __declspec(dllexport) inline void route_pixels(PhaseLattice* ptr, const uint8_t*
     ptr->route_image_pixel_stream(pixel_vec);
 }
 
-// C-Bridge Export Hook: Trigger the profile pass directly from Python
 __declspec(dllexport) inline void profile_hardware(PhaseLattice* ptr) {
     ptr->run_hardware_profile_pass();
 }
 
 __declspec(dllexport) inline double get_convergence(PhaseLattice* ptr) {
     return ptr->calculate_lock_percentage();
+}
+
+// C-Bridge Export Hook: Allow Python to capture memory snapshot arrays
+__declspec(dllexport) inline void get_topology_slice(PhaseLattice* ptr, size_t offset, uint64_t* out_lat, uint64_t* out_lck, size_t count) {
+    ptr->extract_topology_slice(offset, out_lat, out_lck, count);
 }
 
 __declspec(dllexport) inline void get_response(PhaseLattice* ptr, const char* prompt, char* out_buf, size_t max_chars) {

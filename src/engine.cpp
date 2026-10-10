@@ -12,11 +12,18 @@ PhaseLattice::PhaseLattice(size_t elements, int device_mode)
 }
 
 void PhaseLattice::run_hardware_profile_pass() {
-    // Aggressive register validation stress loop to isolate memory bus boundaries
     #pragma omp parallel for schedule(static)
     for (size_t i = 0; i < chunk_count; ++i) {
         uint64_t dummy_mask = 0x5555555566666666ULL ^ structural_locks[i];
         lattice_map[i] = (lattice_map[i] ^ dummy_mask) | 0x1ULL;
+    }
+}
+
+void PhaseLattice::extract_topology_slice(size_t chunk_offset, uint64_t* out_lattice, uint64_t* out_locks, size_t count) const {
+    for (size_t i = 0; i < count; ++i) {
+        size_t idx = (chunk_offset + i) % chunk_count;
+        out_lattice[i] = lattice_map[idx];
+        out_locks[i] = structural_locks[idx];
     }
 }
 
