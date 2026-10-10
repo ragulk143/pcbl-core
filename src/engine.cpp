@@ -9,11 +9,14 @@ PhaseLattice::PhaseLattice(size_t elements, int device_mode)
     chunk_count = (elements + 63) / 64;
     lattice_map.resize(chunk_count, 0xAAAAAAAAAAAAAAAAULL);
     structural_locks.resize(chunk_count, 0x0ULL);
-    
-    if (selected_device == 0) {
-        std::cout << "[Core Initialization] Grid allocated inside multi-threaded Host CPU Cache." << std::endl;
-    } else {
-        std::cout << "[Core Initialization] Grid allocated inside Cross-Vendor Accelerated GPU Device Grid." << std::endl;
+}
+
+void PhaseLattice::run_hardware_profile_pass() {
+    // Aggressive register validation stress loop to isolate memory bus boundaries
+    #pragma omp parallel for schedule(static)
+    for (size_t i = 0; i < chunk_count; ++i) {
+        uint64_t dummy_mask = 0x5555555566666666ULL ^ structural_locks[i];
+        lattice_map[i] = (lattice_map[i] ^ dummy_mask) | 0x1ULL;
     }
 }
 

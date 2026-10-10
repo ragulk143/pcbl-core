@@ -19,9 +19,10 @@ public:
     PhaseLattice(size_t elements, int device_mode);
     
     void route_text_prompt(const std::string& prompt);
-    
-    // Multi-Modal Upgrade: Ingest raw multi-channel pixel streams from image bytes
     void route_image_pixel_stream(const std::vector<uint8_t>& pixel_bytes);
+    
+    // Performance Profiler: High-throughput raw hardware benchmarking loop
+    void run_hardware_profile_pass();
     
     void mutate_and_lock_phase(const std::vector<uint64_t>& target_objective_signature);
     void stream_dataset_file(const std::string& filepath, const std::vector<uint64_t>& target_goal);
@@ -51,10 +52,14 @@ __declspec(dllexport) inline void route_text(PhaseLattice* ptr, const char* text
     ptr->route_text_prompt(std::string(text));
 }
 
-// C-Bridge Export Hook: Expose pixel routing to Python via a raw byte array pointer
 __declspec(dllexport) inline void route_pixels(PhaseLattice* ptr, const uint8_t* bytes, size_t length) {
     std::vector<uint8_t> pixel_vec(bytes, bytes + length);
     ptr->route_image_pixel_stream(pixel_vec);
+}
+
+// C-Bridge Export Hook: Trigger the profile pass directly from Python
+__declspec(dllexport) inline void profile_hardware(PhaseLattice* ptr) {
+    ptr->run_hardware_profile_pass();
 }
 
 __declspec(dllexport) inline double get_convergence(PhaseLattice* ptr) {

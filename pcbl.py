@@ -19,68 +19,67 @@ class LocalBrainEngine:
             self.lib = ctypes.CDLL(library_path)
             
         self.device_mode = 1 if use_gpu else 0
+        self.num_elements = num_elements
+        self.bytes_allocated = (num_elements // 8) * 2
         
+        # Hardened pointer type mappings for massive 64-bit address bounds
         self.lib.create_lattice.argtypes = [ctypes.c_size_t, ctypes.c_int]
         self.lib.create_lattice.restype = ctypes.c_void_p
-        self.lib.route_text.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
         
-        # New Linkage Hook: Bind Python types to the raw pixel array endpoints
-        self.lib.route_pixels.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint8), ctypes.c_size_t]
+        self.lib.free_lattice.argtypes = [ctypes.c_void_p]
+        self.lib.free_lattice.restype = None
         
-        self.lib.get_convergence.argtypes = [ctypes.c_void_p]
-        self.lib.get_convergence.restype = ctypes.c_double
-        self.lib.get_response.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t]
+        self.lib.profile_hardware.argtypes = [ctypes.c_void_p]
+        self.lib.profile_hardware.restype = None
         
         self.obj = self.lib.create_lattice(num_elements, self.device_mode)
 
-    def learn_string(self, text: str):
-        self.lib.route_text(self.obj, text.encode('utf-8'))
+    def execute_hardware_profile(self) -> float:
+        t_start = time.perf_counter()
+        self.lib.profile_hardware(self.obj)
+        t_end = time.perf_counter()
+        return (t_end - t_start) * 1000.0
 
-    def learn_image_pixels(self, pixel_list: list):
-        # Compress the python integer list directly into native C-style uint8 arrays
-        array_type = ctypes.c_uint8 * len(pixel_list)
-        c_array = array_type(*pixel_list)
-        self.lib.route_pixels(self.obj, c_array, len(pixel_list))
-
-    def get_lock_saturation(self) -> float:
-        return self.lib.get_convergence(self.obj)
-
-    def query_raw(self, prompt: str, max_output_chars: int = 1) -> str:
-        buffer = ctypes.create_string_buffer(max_output_chars + 1)
-        self.lib.get_response(self.obj, prompt.encode('utf-8'), buffer, max_output_chars)
-        return buffer.value.decode('utf-8', errors='ignore')
-
-    def generate_streaming(self, initial_prompt: str, tokens_to_generate: int = 40):
-        print(f"\n[Multi-Modal Output] Context prompt: \"{initial_prompt}\"")
-        print("[Multi-Modal Output] Generated Text: ", end="", flush=True)
-        current_context = initial_prompt
-        for _ in range(tokens_to_generate):
-            next_token = self.query_raw(current_context, max_output_chars=1)
-            if not next_token:
-                next_token = " "
-            print(next_token, end="", flush=True)
-            current_context += next_token
-            time.sleep(0.01)
-        print("\n")
+    def __del__(self):
+        if hasattr(self, 'lib') and hasattr(self, 'obj') and self.obj:
+            # Safely pass the 64-bit memory block handle back to C++ for clean disposal
+            self.lib.free_lattice(self.obj)
+            self.obj = None
 
 if __name__ == "__main__":
-    print("[Multi-Modal Brain] Initializing 2-Billion parameter unified bit-lattice...")
-    brain = LocalBrainEngine(num_elements=2000000000, use_gpu=False)
+    print("==========================================================================")
+    print("      SYSTEMS CONFIGURATION TELEMETRY INTERFACE: HARDWARE TEST SUITE      ")
+    print("==========================================================================")
     
-    # 1. Stream text data
-    print("[Multi-Modal Brain] Processing textual token lines...")
-    brain.learn_string("ingesting cross modal datasets natively")
+    target_scales = {
+        "2-Billion Parameters": 2000000000,
+        "4-Billion Parameters": 4000000000,
+        "7-Billion Parameters": 7000000000
+    }
     
-    # 2. Stream visual pixel data! Simulate a 1024-byte RGB image matrix array
-    mock_pixel_data = [(i % 256) for i in range(1024)]
-    print(f"[Multi-Modal Brain] Processing visual array stream ({len(mock_pixel_data)} pixel bytes)...")
-    
-    auto_start = time.perf_counter()
-    brain.learn_image_pixels(mock_pixel_data)
-    auto_end = time.perf_counter()
-    
-    print(f"[Multi-Modal Brain] Visual pixel frame ingested in: {(auto_end - auto_start)*1000:.2f} ms")
-    print(f"[Multi-Modal Brain] Parameter convergence: {brain.get_lock_saturation()}%")
-    
-    # 3. Query text output based on the combined cross-modal tracking states
-    brain.generate_streaming(initial_prompt="image_perception_vector", tokens_to_generate=50)
+    for label, size in target_scales.items():
+        print(f"\n[Allocation Target] Provisioning {label} in memory space...")
+        try:
+            node = LocalBrainEngine(num_elements=size, use_gpu=False)
+            mb_allocated = node.bytes_allocated / (1024 * 1024)
+            print(f" -> Memory footprint on RAM bus: {mb_allocated:.2f} MB")
+            
+            for _ in range(3):
+                node.execute_hardware_profile()
+                
+            pass_ms = node.execute_hardware_profile()
+            
+            gb_processed = node.bytes_allocated / 1e9
+            seconds = pass_ms / 1000.0
+            throughput_gbps = gb_processed / seconds if seconds > 0 else 0
+            
+            print(f" -> Execution pass duration   : {pass_ms:.3f} ms")
+            print(f" -> Memory Bus Throughput Speed: {throughput_gbps:.2f} GB/s")
+            
+            # Trigger explicit deletion inside the loop to see clean allocation turnovers
+            del node
+            
+        except Exception as e:
+            print(f" -> [Allocation Warning] Matrix scale skipped: {e}")
+            
+    print("\n==========================================================================")
