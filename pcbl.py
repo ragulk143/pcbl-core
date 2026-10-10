@@ -1,21 +1,18 @@
 ﻿import ctypes
 import os
 import sys
+import time
 
 class LocalBrainEngine:
     def __init__(self, num_elements: int, use_gpu: bool = False):
-        # 1. Register your MinGW compiler folder so Python can locate libgomp / OpenMP dependencies
         compiler_bin = "C:/zohra-arts/mingw64/bin"
         if os.path.exists(compiler_bin):
             os.add_dll_directory(compiler_bin)
 
-        # 2. Map the production build output path
         library_path = os.path.abspath("C:/zohra-arts/pcblV1/build/libpcbl_shared.dll")
-        
         if not os.path.exists(library_path):
             raise FileNotFoundError(f"Could not locate libpcbl_shared.dll at: {library_path}")
 
-        # 3. Load the library with full Win32 dependency search permissions (winmode=0)
         if sys.platform == 'win32':
             self.lib = ctypes.CDLL(library_path, winmode=0)
         else:
@@ -30,6 +27,12 @@ class LocalBrainEngine:
         self.lib.get_convergence.restype = ctypes.c_double
         self.lib.get_response.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t]
         
+        # Hardened Binary Serialization C-Bridge Hook Specifications
+        self.lib.export_to_binary_checkpoint.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+        self.lib.export_to_binary_checkpoint.restype = ctypes.c_bool
+        self.lib.import_from_binary_checkpoint.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+        self.lib.import_from_binary_checkpoint.restype = ctypes.c_bool
+        
         self.obj = self.lib.create_lattice(num_elements, self.device_mode)
 
     def learn_string(self, text: str):
@@ -38,18 +41,43 @@ class LocalBrainEngine:
     def get_lock_saturation(self) -> float:
         return self.lib.get_convergence(self.obj)
 
-    def query(self, prompt: str, max_output_chars: int = 50) -> str:
+    def save_checkpoint(self, filepath: str) -> bool:
+        return self.lib.export_to_binary_checkpoint(self.obj, filepath.encode('utf-8'))
+
+    def load_checkpoint(self, filepath: str) -> bool:
+        return self.lib.import_from_binary_checkpoint(self.obj, filepath.encode('utf-8'))
+
+    def query_raw(self, prompt: str, max_output_chars: int = 1) -> str:
         buffer = ctypes.create_string_buffer(max_output_chars + 1)
         self.lib.get_response(self.obj, prompt.encode('utf-8'), buffer, max_output_chars)
         return buffer.value.decode('utf-8', errors='ignore')
 
+    def generate_streaming(self, initial_prompt: str, tokens_to_generate: int = 40):
+        print(f"\n[Inference Pass] Prompt context window: \"{initial_prompt}\"")
+        print("[Inference Pass] Model Response: ", end="", flush=True)
+        current_context = initial_prompt
+        for _ in range(tokens_to_generate):
+            next_token = self.query_raw(current_context, max_output_chars=1)
+            if not next_token:
+                next_token = " "
+            print(next_token, end="", flush=True)
+            current_context += next_token
+            time.sleep(0.01)
+        print("\n")
+
 if __name__ == "__main__":
-    print("[Python Suite] Booting 2-Billion parameter matrix on HOST CPU CACHE...")
-    cpu_brain = LocalBrainEngine(num_elements=2000000000, use_gpu=False)
+    print("[Python Suite] Initializing 2-Billion parameter PCBL core engine...")
+    brain = LocalBrainEngine(num_elements=2000000000, use_gpu=False)
     
-    prompt = "decentralized_universal_hardware_matrix_pass"
-    print(f"[Python CPU State] Streaming training prompt sequence: '{prompt}'")
-    cpu_brain.learn_string(prompt)
+    # 1. Run training sequences to flip parameters
+    print("[Training Mode] Streaming raw bootstrap data lines into parameter layers...")
+    brain.learn_string("decentralized local architecture framework training on consumer devices")
     
-    print(f"[Python CPU State] Saturated Convergence: {cpu_brain.get_lock_saturation()}%")
-    print(f"[Python CPU State] Response Synthesis: '{cpu_brain.query(prompt)}'")
+    # 2. Export the current trained state matrix directly to the hard drive path
+    checkpoint_file = "python_pcbl_brain.bin"
+    print(f"[Checkpoint Engine] Freezing state and exporting to: '{checkpoint_file}'...")
+    if brain.save_checkpoint(checkpoint_file):
+        print("[Checkpoint Engine] Binary checkpoint successfully serialized to disk!")
+        
+    # 3. Fire streaming prediction tokens out of memory
+    brain.generate_streaming(initial_prompt="edge_computing", tokens_to_generate=50)
