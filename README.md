@@ -1,6 +1,7 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23286892.svg)](https://doi.org/10.5281/zenodo.23286892)
+<img width="847" height="373" alt="image" src="https://github.com/user-attachments/assets/b43315b9-ad04-4952-a3f8-22bdd1afc2d2" />[![DOI]
 
-![Uploading image.png…]()
+<img width="847" height="373" alt="image" src="https://github.com/user-attachments/assets/ed0868aa-c21c-4851-a957-318be84a0f2f" />
+
 
  # 🚀 PCBL-Core: Phase-Coherent Bit-Lattice Framework V1.0
 
