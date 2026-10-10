@@ -1,1 +1,1 @@
-decentralization stops dependency loops
+decentralization stops server dependency loops natively across host lines
