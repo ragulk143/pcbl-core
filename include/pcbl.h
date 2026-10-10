@@ -19,6 +19,10 @@ public:
     PhaseLattice(size_t elements, int device_mode);
     
     void route_text_prompt(const std::string& prompt);
+    
+    // Multi-Modal Upgrade: Ingest raw multi-channel pixel streams from image bytes
+    void route_image_pixel_stream(const std::vector<uint8_t>& pixel_bytes);
+    
     void mutate_and_lock_phase(const std::vector<uint64_t>& target_objective_signature);
     void stream_dataset_file(const std::string& filepath, const std::vector<uint64_t>& target_goal);
     void ingest_entire_directory(const std::string& folder_path, const std::vector<uint64_t>& target_goal);
@@ -35,7 +39,6 @@ public:
 extern "C" {
 #endif
 
-// Fixed: Explicitly export functions so Windows lets Python find them
 __declspec(dllexport) inline PhaseLattice* create_lattice(size_t elements, int device_mode) {
     return new PhaseLattice(elements, device_mode);
 }
@@ -48,6 +51,12 @@ __declspec(dllexport) inline void route_text(PhaseLattice* ptr, const char* text
     ptr->route_text_prompt(std::string(text));
 }
 
+// C-Bridge Export Hook: Expose pixel routing to Python via a raw byte array pointer
+__declspec(dllexport) inline void route_pixels(PhaseLattice* ptr, const uint8_t* bytes, size_t length) {
+    std::vector<uint8_t> pixel_vec(bytes, bytes + length);
+    ptr->route_image_pixel_stream(pixel_vec);
+}
+
 __declspec(dllexport) inline double get_convergence(PhaseLattice* ptr) {
     return ptr->calculate_lock_percentage();
 }
@@ -57,6 +66,14 @@ __declspec(dllexport) inline void get_response(PhaseLattice* ptr, const char* pr
     size_t copy_len = (std::min)(res.size(), max_chars);
     std::copy_n(res.begin(), copy_len, out_buf);
     out_buf[copy_len] = '\0';
+}
+
+__declspec(dllexport) inline bool export_to_binary_checkpoint(PhaseLattice* ptr, const char* filepath) {
+    return ptr->export_to_binary_checkpoint(std::string(filepath));
+}
+
+__declspec(dllexport) inline bool import_from_binary_checkpoint(PhaseLattice* ptr, const char* filepath) {
+    return ptr->import_from_binary_checkpoint(std::string(filepath));
 }
 
 #ifdef __cplusplus

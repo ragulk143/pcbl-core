@@ -16,14 +16,3 @@ bool PhaseLattice::import_from_binary_checkpoint(const std::string& filepath) {
     in.read(reinterpret_cast<char*>(structural_locks.data()), chunk_count * sizeof(uint64_t));
     return true;
 }
-
-// C-Bridge Linkage Wrapper Block mapping the serialization paths directly to Python
-extern "C" {
-    __declspec(dllexport) bool export_to_binary_checkpoint(PhaseLattice* ptr, const char* filepath) {
-        return ptr->export_to_binary_checkpoint(std::string(filepath));
-    }
-
-    __declspec(dllexport) bool import_from_binary_checkpoint(PhaseLattice* ptr, const char* filepath) {
-        return ptr->import_from_binary_checkpoint(std::string(filepath));
-    }
-}
