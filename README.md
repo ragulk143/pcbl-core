@@ -1,4 +1,5 @@
-﻿# 🚀 PCBL-Core: Phase-Coherent Bit-Lattice Framework V1.0
+https://doi.org/10.5281/zenodo.23286892
+ # 🚀 PCBL-Core: Phase-Coherent Bit-Lattice Framework V1.0
 
 A zero-dependency, bare-metal C++20 local foundation engine designed to explore decentralized AI execution boundaries. By replacing traditional backpropagation with forward-only **Local Phase Resonance Feedback**, it aims to run multi-billion parameter continuous training and inference passes natively inside consumer device CPU cache lines and unified memory environments.
 
